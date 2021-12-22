@@ -1,0 +1,31 @@
+#!/bin/bash -u
+
+LIB="${LIB-}"
+
+# Intercept script arguments
+for _
+do
+  case "$1" in
+  -LIBPATH:*)
+    # Transform "-LIBPATH:/c/..." to "c:/..."
+    _libpath="${1:10:1}:${1:11}"
+    # Replace all / with \
+    _libpath="${_libpath////\\}"
+    # Append to LIB
+    LIB="$LIB${LIB:+;}$_libpath"
+    unset -v _libpath
+    set -- "$@" "$1"
+    ;;
+  -lssl | -lcrypto)
+    # OpenSSL is installed as libxxx.lib, but automake can't find that, only
+    # libxxx.a or xxx.lib
+    set -- "$@" "-llib${1:2}"
+    ;;
+  *)
+    set -- "$@" "$1"
+    ;;
+  esac
+  shift
+done
+
+"$@"

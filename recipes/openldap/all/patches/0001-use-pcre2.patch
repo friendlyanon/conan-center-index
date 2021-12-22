@@ -1,0 +1,23 @@
+--- include/ac/regex.h
++++ include/ac/regex.h
+@@ -21,19 +21,6 @@
+ #include <sys/types.h>
+ #endif
+ 
+-#ifndef HAVE_REGEX_H
+-/*	NO POSIX REGEX!!
+- *  You'll need to install a POSIX compatible REGEX library.
+- *  Either Henry Spencer's or GNU regex will do.
+- */
+-#error "No POSIX REGEX available."
+-
+-#elif HAVE_GNUREGEX_H
+-	/* system has GNU gnuregex.h */
+-#	include <gnuregex.h>
+-#else
+-	/* have regex.h, assume it's POSIX compliant */
+-#	include <regex.h>
+-#endif /* regex.h */
++#include <pcre2posix.h>
+ 
+ #endif /* _AC_REGEX_H_ */

@@ -1,0 +1,12 @@
+--- include/ac/string.h
++++ include/ac/string.h
+@@ -70,6 +70,9 @@
+ #ifndef _WIN32
+ int (strcasecmp)();
+ int (strncasecmp)();
++#else
++#define strcasecmp _stricmp
++#define strncasecmp _strnicmp
+ #endif
+ 
+ #ifndef SAFEMEMCPY

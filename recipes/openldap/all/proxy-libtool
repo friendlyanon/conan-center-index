@@ -1,0 +1,3 @@
+#!/bin/sh
+
+"$LDAP_PROXY_PATH" "$LDAP_LIBTOOL_PATH" "$@"

@@ -1,0 +1,13 @@
+--- configure
++++ configure
+@@ -25458,8 +25458,8 @@
+   ac_i=`$as_echo "$ac_i" | sed "$ac_script"`
+   # 2. Prepend LIBOBJDIR.  When used with automake>=1.10 LIBOBJDIR
+   #    will be set to the directory where LIBOBJS objects are built.
+-  as_fn_append ac_libobjs " \${LIBOBJDIR}$ac_i\$U.$ac_objext"
+-  as_fn_append ac_ltlibobjs " \${LIBOBJDIR}$ac_i"'$U.lo'
++  as_fn_append ac_libobjs " $ac_i.o"
++  as_fn_append ac_ltlibobjs " $ac_i.lo"
+ done
+ LIBOBJS=$ac_libobjs
+ 

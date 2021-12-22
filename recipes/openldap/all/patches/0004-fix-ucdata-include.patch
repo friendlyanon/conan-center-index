@@ -1,0 +1,18 @@
+--- libraries/liblunicode/ure/urestubs.c
++++ libraries/liblunicode/ure/urestubs.c
+@@ -39,14 +39,9 @@
+ #include "portable.h"
+ #include <ac/bytes.h>
+ 
++#include "ucdata.h"
+ #include "ure.h"
+ 
+-#ifdef _MSC_VER
+-#  include "../ucdata/ucdata.h"
+-#else
+-#  include "ucdata.h"
+-#endif
+-
+ /*
+  * This file contains stub routines needed by the URE package to test
+  * character properties and other Unicode implementation specific details.

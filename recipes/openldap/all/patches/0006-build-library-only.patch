@@ -1,0 +1,51 @@
+--- Makefile.in
++++ Makefile.in
+@@ -13,7 +13,7 @@
+ ## top-level directory of the distribution or, alternatively, at
+ ## <http://www.OpenLDAP.org/license.html>.
+ 
+-SUBDIRS= include libraries clients servers tests doc
++SUBDIRS= include libraries
+ CLEANDIRS=
+ INSTALLDIRS= 
+ 
+--- libraries/Makefile.in
++++ libraries/Makefile.in
+@@ -19,12 +19,3 @@
+ 	liblunicode \
+ 	libldap \
+ 	librewrite
+-
+-PKGCONFIG_DIR=$(DESTDIR)$(libdir)/pkgconfig
+-PKGCONFIG_SRCDIRS=liblber libldap
+-
+-install-local:
+-	@$(MKDIR) $(PKGCONFIG_DIR)
+-	@for i in $(PKGCONFIG_SRCDIRS); do \
+-	    $(INSTALL_DATA) $$i/*.pc $(PKGCONFIG_DIR); \
+-	done
+--- libraries/libldap/Makefile.in
++++ libraries/libldap/Makefile.in
+@@ -77,22 +77,7 @@
+ urltest: $(XLIBS) urltest.o
+ 	$(LTLINK) -o $@ urltest.o $(LIBS)
+ 
+-
+-CFFILES=ldap.conf
+-
+ install-local: $(CFFILES) FORCE
+ 	-$(MKDIR) $(DESTDIR)$(libdir)
+ 	$(LTINSTALL) $(INSTALLFLAGS) -m 644 $(LIBRARY) $(DESTDIR)$(libdir)
+ 	$(LTFINISH) $(DESTDIR)$(libdir)
+-	-$(MKDIR) $(DESTDIR)$(sysconfdir)
+-	@for i in $(CFFILES); do \
+-		if test ! -f $(DESTDIR)$(sysconfdir)/$$i; then \
+-			echo "installing $$i in $(sysconfdir)"; \
+-			echo "$(INSTALL) $(INSTALLFLAGS) -m 644  $(srcdir)/$$i $(DESTDIR)$(sysconfdir)/$$i"; \
+-			$(INSTALL) $(INSTALLFLAGS) -m 644 $(srcdir)/$$i $(DESTDIR)$(sysconfdir)/$$i; \
+-		else \
+-			echo "PRESERVING EXISTING CONFIGURATION FILE $(sysconfdir)/$$i" ; \
+-		fi; \
+-		$(INSTALL) $(INSTALLFLAGS) -m 644 $(srcdir)/$$i $(DESTDIR)$(sysconfdir)/$$i.default; \
+-	done
+-
