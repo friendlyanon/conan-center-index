@@ -1,0 +1,12 @@
+sources:
+  "2.6.0":
+    sha256: "b71c580eac573e9aba15d95f33dd4dd08f2ed4f0d7fc09e08ad4be7ed1e41a4f"
+    url: https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-2.6.0.tgz
+patches:
+  "2.6.0":
+    - patch_file: patches/0001-timespec-in-time.patch
+      base_path: source_subfolder
+    - patch_file: patches/0002-no-regex.patch
+      base_path: source_subfolder
+    - patch_file: patches/0003-fix-windows-build.patch
+      base_path: source_subfolder

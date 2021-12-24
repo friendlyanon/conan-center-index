@@ -1,0 +1,138 @@
+--- include/ac/socket.h
++++ include/ac/socket.h
+@@ -98,9 +98,11 @@
+ #		define tcp_close( s )		closesocket( s )
+ #	endif
+ 
+-#define EWOULDBLOCK WSAEWOULDBLOCK
+-#define EINPROGRESS WSAEINPROGRESS
+-#define ETIMEDOUT	WSAETIMEDOUT
++#	if _MSC_VER < 1600
++#		define EWOULDBLOCK WSAEWOULDBLOCK
++#		define EINPROGRESS WSAEINPROGRESS
++#		define ETIMEDOUT	WSAETIMEDOUT
++#	endif
+ 
+ #undef	sock_errno
+ #undef	sock_errstr
+--- include/getopt-compat.h
++++ include/getopt-compat.h
+@@ -32,7 +32,9 @@
+ #define getopt lutil_getopt
+ 
+ LDAP_LUTIL_V (char *) optarg;
+-LDAP_LUTIL_V (int) optind, opterr, optopt;
++LDAP_LUTIL_V (int) optind;
++LDAP_LUTIL_V (int) opterr;
++LDAP_LUTIL_V (int) optopt;
+ LDAP_LUTIL_F (int) getopt LDAP_P(( int, char * const [], const char *));
+ 
+ LDAP_END_DECL
+--- include/ldap_log.h
++++ include/ldap_log.h
+@@ -132,12 +132,12 @@
+      * a 'proper' dllimport.
+      */
+ #ifndef ldap_debug
+-extern int	ldap_debug;
++LDAP_REWRITE_V(int)	ldap_debug;
+ #endif /* !ldap_debug */
+ 
+ #ifdef LDAP_SYSLOG
+-extern int	ldap_syslog;
+-extern int	ldap_syslog_level;
++LDAP_REWRITE_V(int)	ldap_syslog;
++LDAP_REWRITE_V(int)	ldap_syslog_level;
+ 
+ #ifdef HAVE_EBCDIC
+ #define syslog	eb_syslog
+@@ -186,9 +186,9 @@
+ #endif /* ! LDAP_INT_DEBUG */
+ 
+ /* Actually now in liblber/debug.c */
+-LDAP_LUTIL_F(int) lutil_debug_file LDAP_P(( FILE *file ));
++LBER_F(int) lutil_debug_file LDAP_P(( FILE *file ));
+ 
+-LDAP_LUTIL_F(void) lutil_debug LDAP_P((
++LBER_F(void) lutil_debug LDAP_P((
+ 	int debug, int level,
+ 	const char* fmt, ... )) LDAP_GCCATTR((format(printf, 3, 4)));
+ 
+--- libraries/liblber/nt_err.c
++++ libraries/liblber/nt_err.c
+@@ -15,6 +15,9 @@
+ 
+ #include "portable.h"
+ 
++LBER_F(char *)
++ber_pvt_wsa_err2string LDAP_P((int err));
++
+ #ifdef HAVE_WINSOCK2
+ #include <winsock2.h>
+ #elif defined(HAVE_WINSOCK)
+--- libraries/libldap/thr_nt.c
++++ libraries/libldap/thr_nt.c
+@@ -18,7 +18,9 @@
+ 
+ #if defined( HAVE_NT_THREADS )
+ 
++#ifndef _WIN32_WINNT
+ #define _WIN32_WINNT 0x0400
++#endif
+ #include <windows.h>
+ #include <process.h>
+ 
+--- include/portable.hin
++++ include/portable.hin
+@@ -1176,6 +1176,10 @@
+ #define vsprintf ber_pvt_vsprintf
+ #endif
+ 
++#ifdef _WIN32
++#	include <windows.h>
++#endif
++
+ #include "ac/fdset.h"
+ 
+ #include "ldap_cdefs.h"
+--- include/ldap_cdefs.h
++++ include/ldap_cdefs.h
+@@ -127,22 +127,28 @@
+  */
+ 
+ /* LBER library */
+-#if defined(_WIN32) && \
+-    ((defined(LDAP_LIBS_DYNAMIC) && !defined(LBER_LIBRARY)) || \
+-     (!defined(LDAP_LIBS_DYNAMIC) && defined(SLAPD_IMPORT)))
+-#	define LBER_F(type)		extern __declspec(dllimport) type
+-#	define LBER_V(type)		extern __declspec(dllimport) type
++#ifdef _WIN32
++#	ifdef lber_EXPORTS
++#		define LBER_F(type) extern __declspec(dllexport) type
++#		define LBER_V(type) extern __declspec(dllexport) type
++#	else
++#		define LBER_F(type) extern __declspec(dllimport) type
++#		define LBER_V(type) extern __declspec(dllimport) type
++#	endif
+ #else
+ #	define LBER_F(type)		extern type
+ #	define LBER_V(type)		extern type
+ #endif
+ 
+ /* LDAP library */
+-#if defined(_WIN32) && \
+-    ((defined(LDAP_LIBS_DYNAMIC) && !defined(LDAP_LIBRARY)) || \
+-     (!defined(LDAP_LIBS_DYNAMIC) && defined(SLAPD_IMPORT)))
+-#	define LDAP_F(type)		extern __declspec(dllimport) type
+-#	define LDAP_V(type)		extern __declspec(dllimport) type
++#ifdef _WIN32
++#	ifdef ldap_EXPORTS
++#		define LDAP_F(type) extern __declspec(dllexport) type
++#		define LDAP_V(type) extern __declspec(dllexport) type
++#	else
++#		define LDAP_F(type) extern __declspec(dllimport) type
++#		define LDAP_V(type) extern __declspec(dllimport) type
++#	endif
+ #else
+ #	define LDAP_F(type)		extern type
+ #	define LDAP_V(type)		extern type
