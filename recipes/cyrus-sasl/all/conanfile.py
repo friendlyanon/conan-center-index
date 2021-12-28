@@ -1,8 +1,7 @@
-import glob
+import functools
 import os
-import shutil
 
-from conans import AutoToolsBuildEnvironment, ConanFile, tools
+from conans import CMake, ConanFile, tools
 from conans.errors import ConanInvalidConfiguration
 
 required_conan_version = ">=1.33.0"
@@ -20,7 +19,7 @@ class CyrusSaslConan(ConanFile):
     )
 
     topics = ("SASL", "authentication", "authorization")
-    settings = "os", "compiler", "build_type", "arch"
+    settings = ("os", "compiler", "build_type", "arch")
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
@@ -53,8 +52,7 @@ class CyrusSaslConan(ConanFile):
         "with_mysql": False,
         "with_sqlite3": False,
     }
-    exports_sources = ("patches/**",)
-    _autotools = None
+    exports_sources = ("CMakeLists.txt",)
 
     @property
     def _source_subfolder(self):
@@ -69,10 +67,6 @@ class CyrusSaslConan(ConanFile):
         del self.settings.compiler.cppstd
         if self.options.shared:
             del self.options.fPIC
-        if self.settings.os == "Windows":
-            raise ConanInvalidConfiguration(
-                "Cyrus SASL package is not compatible with Windows yet."
-            )
 
     def requirements(self):
         if self.options.with_openssl:
@@ -87,126 +81,33 @@ class CyrusSaslConan(ConanFile):
             raise ConanInvalidConfiguration("with_gssapi requires krb5 recipe, not yet available in CCI")
             self.requires("krb5/1.18.3")
 
-    def build_requirements(self):
-        self.build_requires("gnu-config/cci.20201022")
-
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version],
-                  destination=self._source_subfolder, strip_root=True)
+        root = self._source_subfolder
+        get_args = self.conan_data["sources"][self.version]
+        tools.get(**get_args, destination=root, strip_root=True)
 
-    @property
-    def _user_info_build(self):
-        return getattr(self, "user_info_build", None) or self.deps_user_info
-
-    def _patch_sources(self):
-        for patch in self.conan_data.get("patches", {}).get(self.version, []):
-            tools.patch(**patch)
-        shutil.copy(self._user_info_build["gnu-config"].CONFIG_SUB,
-                    os.path.join(self._source_subfolder, "config", "config.sub"))
-        shutil.copy(self._user_info_build["gnu-config"].CONFIG_GUESS,
-                    os.path.join(self._source_subfolder, "config", "config.guess"))
-
-    def _configure_autotools(self):
-        if self._autotools is None:
-            self._autotools = AutoToolsBuildEnvironment(
-                self, win_bash=tools.os_info.is_windows
-            )
-            configure_args = [
-                "--disable-sample",
-                "--disable-macos-framework",
-                "--with-dblib=none",
-            ]
-            if self.options.shared:
-                configure_args.extend(["--enable-shared", "--disable-static"])
-            else:
-                configure_args.extend(["--disable-shared", "--enable-static"])
-
-            if not self.options.with_openssl:
-                configure_args.append("--without-openssl")
-
-            if not self.options.with_digest:
-                configure_args.append("--disable-digest")
-
-            if not self.options.with_scram:
-                configure_args.append("--disable-scram")
-
-            if not self.options.with_otp:
-                configure_args.append("--disable-otp")
-
-            if not self.options.with_krb4:
-                configure_args.append("--disable-krb4")
-
-            if self.options.with_gssapi:
-                configure_args.append("--with-gss_impl=mit")
-            else:
-                configure_args.append("--disable-gssapi")
-
-            if not self.options.with_plain:
-                configure_args.append("--disable-plain")
-
-            if not self.options.with_anon:
-                configure_args.append("--disable-anon")
-
-            if (
-                self.options.with_postgresql
-                or self.options.with_mysql
-                or self.options.with_sqlite3
-            ):
-                configure_args.append("--enable-sql")
-                if self.options.with_postgresql:
-                    configure_args.append(
-                        "--with-pgsql={}".format(self.deps_cpp_info["libpq"].rootpath)
-                    )
-                else:
-                    configure_args.append("--with-pgsql=no")
-                if self.options.with_mysql:
-                    configure_args.append(
-                        "--with-mysql={}".format(
-                            self.deps_cpp_info["libmysqlclient"].rootpath
-                        )
-                    )
-                else:
-                    configure_args.append("--with-mysql=no")
-                configure_args.append("--with-sqlite=no")
-                if self.options.with_mysql:
-                    configure_args.append(
-                        "--with-sqlite3={}".format(
-                            self.deps_cpp_info["libmysqlclient"].rootpath
-                        )
-                    )
-                else:
-                    configure_args.append("--with-sqlite3=no")
-            else:
-                configure_args.append("--disable-sql")
-
-            configure_file_path = os.path.join(self._source_subfolder)
-            self._autotools.configure(
-                configure_dir=configure_file_path, args=configure_args
-            )
-        return self._autotools
+    @functools.lru_cache(1)
+    def _configure_cmake(self):
+        cmake = CMake(self)
+        cmake.definitions["CONAN_cyrus-sasl_VERSION"] = self.version
+        cmake.configure()
+        return cmake
 
     def build(self):
-        self._patch_sources()
-        autotools = self._configure_autotools()
-        autotools.make()
+        for patch in self.conan_data.get("patches", {}).get(self.version, []):
+            tools.patch(**patch)
+        cmake = self._configure_cmake()
+        cmake.build()
 
     def package(self):
-        self.copy(pattern="COPYING", src=self._source_subfolder, dst="licenses")
-        autotools = self._configure_autotools()
-        autotools.install()
-
-        self._remove_la()
-        tools.rmdir(os.path.join(self.package_folder, "share"))
-        tools.rmdir(os.path.join(self.package_folder, "lib", "pkgconfig"))
-
-    def _remove_la(self):
-        la_exp = os.path.join(self.package_folder, "lib", "**", "*.la")
-        for la_file in glob.glob(la_exp, recursive=True):
-            os.remove(la_file)
+        self.copy("COPYING", "licenses", self._source_subfolder)
+        cmake = self._configure_cmake()
+        cmake.install()
 
     def package_info(self):
-        self.cpp_info.names["pkg_config"] = "libsasl2"
-        self.cpp_info.libs = ["sasl2"]
+        info = self.cpp_info
+        info.names["pkg_config"] = "libsasl2"
+        info.libs = ["sasl2"]
         bindir = os.path.join(self.package_folder, "bin")
-        self.output.info("Appending PATH environment variable: {}".format(bindir))
+        self.output.info(f"Appending PATH environment variable: {bindir}")
         self.env_info.PATH.append(bindir)
