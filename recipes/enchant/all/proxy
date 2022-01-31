@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -eu
+unset -v libpath
+
+# Intercept script arguments
+for _
+do
+  case "$1" in
+  -LIBPATH:*)
+    # Transform "-LIBPATH:/c/..." to "c:/..."
+    libpath="${1:10:1}:${1:11}"
+    ;;
+  -L*)
+    # Transform "-LC:/..." to "C:/..."
+    libpath="${1:2}"
+    ;;
+  -l*)
+    # Transform "-lx" to "x.lib"
+    set -- "$@" "${1:2}.lib"
+    ;;
+  *)
+    set -- "$@" "$1"
+    ;;
+  esac
+  if [ ${libpath+set} ]; then
+    # Replace all / with \ and append to LIB
+    LIB="${LIB-}${LIB:+;}${libpath////\\}"
+    unset libpath
+  fi
+  shift
+done
+
+"$@"
